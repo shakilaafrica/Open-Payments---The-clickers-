@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenRemit Safe Ride</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --green:#0B6E4F;--green-l:#E8F5EE;--green-d:#064E38;
+  --amber:#F4A261;--amber-l:#FFF3E0;
+  --red:#DC2626;--red-l:#FEF2F2;
+  --blue:#2563EB;--blue-l:#EFF6FF;
+  --text:#111827;--muted:#6B7280;--border:#E5E7EB;--bg:#F9FAFB;
+  --font:'Inter',sans-serif;
+}
+body{font-family:var(--font);background:#eef0f4;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:28px 12px;gap:0}
+
+.page-header{text-align:center;margin-bottom:22px}
+.page-header h1{font-size:20px;font-weight:600;color:#1a1a1a;margin-bottom:4px}
+.page-header p{font-size:13px;color:var(--muted);max-width:440px;margin:0 auto 12px}
+
+/* ILP badge */
+.ilp-badge{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid var(--border);border-radius:99px;padding:5px 12px;font-size:11px;font-weight:500;color:var(--muted);box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.ilp-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* backend status strip */
+.backend-strip{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--muted);margin-bottom:22px;box-shadow:0 1px 3px rgba(0,0,0,.05);max-width:700px;width:100%}
+.backend-strip .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot-grey{background:#D1D5DB}
+.dot-green{background:#4ade80}
+.dot-red{background:var(--red)}
+.backend-strip input{flex:1;border:none;outline:none;font-family:var(--font);font-size:12px;color:var(--text);background:transparent;min-width:0}
+.check-btn{background:var(--green);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:11px;font-weight:500;cursor:pointer;font-family:var(--font);white-space:nowrap}
+
+/* DEMO LAYOUT */
+.demo{display:flex;gap:28px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+
+/* PHONE */
+.phone-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.role-tabs{display:flex;gap:6px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:4px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.rtab{padding:7px 16px;border-radius:7px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:var(--font);background:transparent;color:var(--muted);transition:all .15s}
+.rtab.active{background:var(--green);color:#fff}
+
+.phone{width:340px;background:#1c1c1e;border-radius:40px;padding:10px;box-shadow:0 28px 64px rgba(0,0,0,.26)}
+.screen-root{background:#fff;border-radius:30px;overflow:hidden;height:690px;position:relative}
+.screen{position:absolute;inset:0;overflow-y:auto;display:none;flex-direction:column;animation:fu .2s ease}
+.screen.active{display:flex}
+@keyframes fu{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* SHARED PHONE UI */
+.sbar{height:30px;background:var(--green);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0}
+.sbar span{color:#fff;font-size:10px;font-weight:500}
+.hdr{background:var(--green);padding:12px 20px 18px;flex-shrink:0}
+.hdr h2{color:#fff;font-size:17px;font-weight:500}
+.hdr p{color:rgba(255,255,255,.7);font-size:12px;margin-top:2px}
+.content{padding:16px;flex:1;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.card{background:#fff;border:.5px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.05)}
+.btn{width:100%;padding:13px;border-radius:10px;border:none;font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font);transition:opacity .15s;text-align:center}
+.btn:active{opacity:.8}.btn:disabled{opacity:.5;cursor:default}
+.bg{background:var(--green);color:#fff}
+.bo{background:#fff;color:var(--green);border:1.5px solid var(--green)}
+.ba{background:var(--amber);color:#fff}
+.sm{padding:8px 14px;border-radius:8px;font-size:12px;width:auto}
+.row{display:flex;align-items:center;justify-content:space-between}
+.gap{display:flex;align-items:center;gap:10px}
+.lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:500}
+.mut{color:var(--muted);font-size:13px}
+.av{width:38px;height:38px;border-radius:50%;background:var(--green-l);display:flex;align-items:center;justify-content:center;color:var(--green);font-weight:600;font-size:15px;flex-shrink:0}
+.pill{display:inline-flex;align-items:center;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:500}
+.pg{background:var(--green-l);color:var(--green-d)}.pa{background:var(--amber-l);color:#92400E}.pr{background:var(--red-l);color:var(--red)}.pb{background:var(--blue-l);color:var(--blue)}
+.ifield{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:var(--font);color:var(--text);background:var(--bg);outline:none}
+.ifield:focus{border-color:var(--green);background:#fff}
+.divider{height:1px;background:var(--border);margin:4px 0}
+.sr{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:.5px solid var(--border)}.sr:last-child{border-bottom:none}
+.err{color:var(--red);font-size:12px;text-align:center;min-height:14px}
+.chips{display:flex;gap:8px}
+.chip{flex:1;padding:10px 6px;border:1.5px solid var(--border);border-radius:8px;text-align:center;font-size:13px;font-weight:500;cursor:pointer;background:#fff;color:var(--muted);font-family:var(--font);transition:all .15s}
+.chip.sel{border-color:var(--green);background:var(--green-l);color:var(--green-d)}
+.si{width:64px;height:64px;border-radius:50%;background:var(--green-l);display:flex;align-items:center;justify-content:center;margin:0 auto;font-size:28px}
+
+/* PIN */
+.pdots{display:flex;gap:8px;justify-content:center}
+.pd{width:44px;height:54px;border-radius:10px;background:var(--bg);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:600;transition:all .15s}
+.pd.f{background:var(--green);border-color:var(--green);color:#fff}
+.kp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 16px;width:100%}
+.kk{padding:14px;border-radius:10px;background:var(--bg);border:.5px solid var(--border);font-size:20px;font-weight:500;cursor:pointer;font-family:var(--font);color:var(--text);text-align:center;transition:background .1s}
+.kk:active{background:var(--border)}
+
+/* OP steps */
+.op-steps{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--bg);border-radius:10px;border:.5px solid var(--border)}
+.op-row{display:flex;align-items:center;gap:8px;font-size:12px}
+.sn{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;border:1.5px solid var(--border);color:var(--muted);background:#fff;transition:all .3s}
+.sn.done{background:var(--green-l);border-color:var(--green);color:var(--green-d)}
+.sn.active{background:var(--green);border-color:var(--green);color:#fff}
+.sl{font-size:12px;color:var(--muted);transition:color .3s}
+.sl.active{color:var(--text);font-weight:500}
+.sl.done{color:var(--green-d)}
+
+/* spinner */
+.spin{width:16px;height:16px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* GUIDE PANEL */
+.guide-panel{width:200px;flex-shrink:0;display:flex;flex-direction:column;gap:10px;padding-top:42px}
+.guide-card{background:#fff;border-radius:12px;padding:14px;box-shadow:0 1px 4px rgba(0,0,0,.07)}
+.guide-card h3{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:10px;padding-bottom:7px;border-bottom:1px solid var(--border)}
+.gs{display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:7px;cursor:pointer;margin-bottom:2px;transition:background .1s}
+.gs:hover{background:var(--bg)}
+.gs.cur{background:var(--green-l)}
+.gs .gn{width:18px;height:18px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;background:var(--bg);border:1px solid var(--border);color:var(--muted)}
+.gs.cur .gn{background:var(--green);border-color:var(--green);color:#fff}
+.gs.done .gn{background:var(--green-l);border-color:var(--green);color:var(--green-d);font-size:8px}
+.gs .gl{font-size:11px;color:var(--muted);line-height:1.3}
+.gs.cur .gl{color:var(--green-d);font-weight:500}
+.gs.done .gl{color:#555}
+.gsec{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:#ccc;padding:6px 6px 2px}
+
+.back-btn{background:none;border:none;cursor:pointer;color:rgba(255,255,255,.8);font-size:13px;padding:0;margin-bottom:8px;font-family:var(--font)}
+
+/* toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:9999;display:none;max-width:300px;text-align:center;box-shadow:0 4px 14px rgba(0,0,0,.3)}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>OpenRemit Safe Ride</h1>
+  <p>Children travel safely with no cash. Parents pre-authorise fares via the Interledger Open Payments protocol — payment only releases when the driver confirms drop-off.</p>
+  <div class="ilp-badge"><div class="ilp-dot"></div> Interledger Open Payments Protocol</div>
+</div>
+
+<!-- Backend connection strip -->
+<div class="backend-strip">
+  <div class="dot dot-grey" id="be-dot"></div>
+  <span id="be-label" style="white-space:nowrap;font-weight:500;color:#374151">Backend:</span>
+  <input id="be-url" value="http://localhost:3001" placeholder="http://localhost:3001" spellcheck="false">
+  <button class="check-btn" onclick="checkBackend()">Connect</button>
+  <span id="be-status" style="white-space:nowrap;color:var(--muted)">Not connected</span>
+</div>
+
+<div class="demo">
+
+  <!-- GUIDE -->
+  <div class="guide-panel" id="guide-panel">
+    <div class="guide-card">
+      <h3>Demo flow</h3>
+      <div id="guide-steps"></div>
+    </div>
+  </div>
+
+  <!-- PHONE -->
+  <div class="phone-col">
+    <div class="role-tabs">
+      <button class="rtab active" id="tab-parent" onclick="switchRole('parent')">👨‍👩‍👧 Parent</button>
+      <button class="rtab" id="tab-driver" onclick="switchRole('driver')">🚐 Driver</button>
+    </div>
+    <div class="phone">
+      <div class="screen-root">
+
+        <!-- ══════════════════════════════════════
+             PARENT SCREENS
+        ══════════════════════════════════════ -->
+
+        <!-- P-home -->
+        <div class="screen active" id="P-home">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div class="hdr">
+            <div class="row">
+              <div><p>Good morning</p><h2>Thembeka M.</h2></div>
+              <div style="width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:16px">🔔</div>
+            </div>
+          </div>
+          <div class="content">
+            <!-- Wallet card -->
+            <div class="card" style="background:linear-gradient(135deg,#0B6E4F,#1a9c6e);border:none;padding:16px 18px">
+              <div style="color:rgba(255,255,255,.7);font-size:11px;text-transform:uppercase;letter-spacing:.05em">Interledger wallet</div>
+              <div style="color:#fff;font-size:13px;font-weight:500;margin-top:6px;word-break:break-all" id="p-wallet-display">$ilp.interledger-test.dev/thembeka</div>
+              <div style="margin-top:10px;display:flex;align-items:center;gap:6px">
+                <div style="width:7px;height:7px;border-radius:50%;background:#4ade80"></div>
+                <span style="color:rgba(255,255,255,.8);font-size:11px">Open Payments enabled</span>
+              </div>
+            </div>
+            <!-- Scholars -->
+            <div class="card">
+              <div class="row" style="margin-bottom:10px">
+                <div style="font-weight:500;font-size:14px">Today's scholars</div>
+                <button class="btn bo sm" onclick="go('P-add')">+ Add</button>
+              </div>
+              <div id="p-scholar-list">
+                <div class="mut" style="font-size:13px;padding:8px 0;text-align:center">Loading…</div>
+              </div>
+            </div>
+            <button class="btn bg" onclick="go('P-auth');renderPicker()">🔐 Authorise a trip</button>
+          </div>
+        </div>
+
+        <!-- P-add -->
+        <div class="screen" id="P-add">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div class="hdr">
+            <button class="back-btn" onclick="back()">← Back</button>
+            <h2>Add scholar</h2><p>Saved to your account</p>
+          </div>
+          <div class="content">
+            <div><div class="lbl" style="margin-bottom:6px">Full name</div><input class="ifield" id="add-name" placeholder="e.g. Siya Dlamini"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><div class="lbl" style="margin-bottom:6px">Age</div><input class="ifield" id="add-age" type="number" placeholder="9" min="4" max="18"></div>
+              <div><div class="lbl" style="margin-bottom:6px">Grade</div><input class="ifield" id="add-grade" placeholder="Grade 4"></div>
+            </div>
+            <div><div class="lbl" style="margin-bottom:6px">School</div><input class="ifield" id="add-school" placeholder="Prestige Primary"></div>
+            <div class="err" id="add-err"></div>
+            <button class="btn bg" id="add-btn" onclick="addScholar()">Save scholar</button>
+          </div>
+        </div>
+
+        <!-- P-auth: start Open Payments flow -->
+        <div class="screen" id="P-auth">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div class="hdr">
+            <button class="back-btn" onclick="back()">← Back</button>
+            <h2>Authorise trip</h2><p>Open Payments grant flow</p>
+          </div>
+          <div class="content">
+            <div class="card">
+              <div class="lbl" style="margin-bottom:8px">Select scholar</div>
+              <div id="auth-picker"></div>
+            </div>
+            <div class="card">
+              <div class="lbl" style="margin-bottom:10px">Fare (ZAR)</div>
+              <div class="chips" id="fare-chips">
+                <button class="chip" onclick="selFare(this,20)">R20</button>
+                <button class="chip sel" onclick="selFare(this,34)">R34</button>
+                <button class="chip" onclick="selFare(this,50)">R50</button>
+                <button class="chip" onclick="selFare(this,68)">R68</button>
+              </div>
+            </div>
+            <!-- Live Open Payments step tracker -->
+            <div class="op-steps">
+              <div class="op-row"><div class="sn" id="op1">1</div><span class="sl" id="opl1">Resolve wallet addresses</span></div>
+              <div class="op-row"><div class="sn" id="op2">2</div><span class="sl" id="opl2">Create incoming payment</span></div>
+              <div class="op-row"><div class="sn" id="op3">3</div><span class="sl" id="opl3">Get quote</span></div>
+              <div class="op-row"><div class="sn" id="op4">4</div><span class="sl" id="opl4">Request outgoing grant</span></div>
+              <div class="op-row"><div class="sn" id="op5">5</div><span class="sl" id="opl5">Parent approves in wallet</span></div>
+              <div class="op-row"><div class="sn" id="op6">6</div><span class="sl" id="opl6">Outgoing payment created</span></div>
+            </div>
+            <div class="err" id="auth-err"></div>
+            <button class="btn bg" id="auth-btn" onclick="startFlow()">🔐 Start Open Payments flow</button>
+          </div>
+        </div>
+
+        <!-- P-consent: wallet approval -->
+        <div class="screen" id="P-consent">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div class="hdr"><h2>Wallet approval</h2><p>Open the link to approve</p></div>
+          <div class="content" style="align-items:center;text-align:center;gap:14px;padding-top:20px">
+            <div style="font-size:44px">🏦</div>
+            <div style="font-weight:500;font-size:15px">Approve at your Interledger wallet</div>
+            <div class="card" style="width:100%;text-align:left">
+              <div class="row" style="margin-bottom:8px"><span class="mut" style="font-size:12px">Scholar</span><span style="font-size:13px;font-weight:500" id="con-scholar">—</span></div>
+              <div class="row" style="margin-bottom:8px"><span class="mut" style="font-size:12px">Fare</span><span style="font-size:13px;font-weight:500" id="con-fare">—</span></div>
+              <div class="row"><span class="mut" style="font-size:12px">Transaction</span><span style="font-size:11px;color:var(--muted)" id="con-txid">—</span></div>
+            </div>
+            <div style="background:var(--amber-l);border-radius:10px;padding:12px 14px;width:100%;text-align:left;font-size:12px;color:#92400E;line-height:1.5;border:1px solid #FDDBA3">
+              💡 This opens your actual Interledger wallet at <strong>ilp.interledger-test.dev</strong>. The grant approves a payment that releases <em>only</em> on drop-off — nothing moves now.
+            </div>
+            <a id="consent-link" href="#" target="_blank" class="btn bg" style="display:block;text-decoration:none;padding:13px;width:100%">Open wallet to approve →</a>
+            <button class="btn bo" style="width:100%" onclick="startPolling()">I've approved — check status</button>
+            <div class="mut" style="font-size:12px" id="poll-msg">Waiting for wallet approval…</div>
+          </div>
+        </div>
+
+        <!-- P-pin: grant done, PIN ready -->
+        <div class="screen" id="P-pin">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div style="padding:28px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;flex:1">
+            <div class="si">✅</div>
+            <div>
+              <div style="font-size:20px;font-weight:500">Grant approved!</div>
+              <div class="mut" style="font-size:13px;margin-top:4px" id="pin-summary">—</div>
+            </div>
+            <div class="card" style="width:100%">
+              <div class="lbl" style="margin-bottom:12px">Give this PIN to your scholar</div>
+              <div class="pdots" id="p-pin-dots"></div>
+              <div class="mut" style="font-size:11px;margin-top:10px">Single-use · valid for today's trip</div>
+            </div>
+            <div style="background:var(--amber-l);border-radius:10px;padding:12px 14px;border:1px solid #FDDBA3;text-align:left;width:100%;font-size:12px;color:#92400E;line-height:1.6">
+              ⚠️ R<span id="pin-fare-note">—</span> is locked in escrow. It transfers to the driver only after they confirm the scholar arrived safely.
+            </div>
+            <button class="btn bo" onclick="go('P-home');loadScholars()">← Back to home</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════
+             DRIVER SCREENS
+        ══════════════════════════════════════ -->
+
+        <!-- D-home -->
+        <div class="screen" id="D-home">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div class="hdr">
+            <div class="row">
+              <div><p>Driver dashboard</p><h2>Sipho K.</h2></div>
+              <div style="background:rgba(255,255,255,.18);padding:5px 12px;border-radius:18px">
+                <span style="color:#fff;font-size:12px;font-weight:500" id="d-earned">R0 today</span>
+              </div>
+            </div>
+          </div>
+          <div class="content">
+            <div class="card" style="text-align:center;padding:20px 16px">
+              <div style="font-size:32px;margin-bottom:8px">📱</div>
+              <div style="font-weight:500;font-size:15px;margin-bottom:4px">Ready to board</div>
+              <div class="mut" style="font-size:12px;margin-bottom:14px">Ask the scholar for their 5-digit PIN</div>
+              <button class="btn bg" onclick="go('D-pin');resetPin()">Enter scholar PIN</button>
+            </div>
+            <div class="card">
+              <div style="font-weight:500;font-size:14px;margin-bottom:10px">Completed trips today</div>
+              <div id="d-trip-list">
+                <div class="mut" style="font-size:13px;text-align:center;padding:8px">No trips yet</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- D-pin -->
+        <div class="screen" id="D-pin">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div class="hdr">
+            <button class="back-btn" onclick="back()">← Back</button>
+            <h2>Validate scholar</h2><p>Enter the 5-digit PIN</p>
+          </div>
+          <div class="content" style="align-items:center;gap:14px;padding-top:20px">
+            <div class="pdots" id="d-pin-dots"></div>
+            <div class="mut" style="font-size:13px;text-align:center" id="d-pin-status">Enter the 5-digit PIN (0/5)</div>
+            <div class="err" id="d-pin-err"></div>
+            <div class="kp">
+              <button class="kk" onclick="pk('1')">1</button><button class="kk" onclick="pk('2')">2</button><button class="kk" onclick="pk('3')">3</button>
+              <button class="kk" onclick="pk('4')">4</button><button class="kk" onclick="pk('5')">5</button><button class="kk" onclick="pk('6')">6</button>
+              <button class="kk" onclick="pk('7')">7</button><button class="kk" onclick="pk('8')">8</button><button class="kk" onclick="pk('9')">9</button>
+              <button class="kk" onclick="pk('back')">⌫</button><button class="kk" onclick="pk('0')">0</button>
+              <button class="kk bg" onclick="validatePin()" style="font-size:13px">OK</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- D-board -->
+        <div class="screen" id="D-board">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div class="hdr"><h2>Scholar validated ✓</h2><p>Safe to board</p></div>
+          <div class="content">
+            <div class="card" style="border-color:var(--green);border-width:1.5px">
+              <div class="gap" style="margin-bottom:12px">
+                <div class="av" id="d-av">?</div>
+                <div><div style="font-weight:500;font-size:15px" id="d-board-name">—</div><div class="mut" style="font-size:12px" id="d-board-school">—</div></div>
+                <div class="pill pg" style="margin-left:auto">Verified ✓</div>
+              </div>
+              <div class="divider"></div>
+              <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+                <div class="row"><span class="mut" style="font-size:13px">Fare</span><span style="font-size:13px;font-weight:600" id="d-board-fare">—</span></div>
+                <div class="row"><span class="mut" style="font-size:13px">Payment</span><span class="pill pa">Held in escrow</span></div>
+              </div>
+            </div>
+            <div style="background:var(--amber-l);border-radius:10px;padding:12px 14px;border:1px solid #FDDBA3;font-size:12px;color:#92400E;line-height:1.6">
+              ⚠️ The fare is locked via Open Payments escrow. You'll receive it the moment you confirm safe drop-off.
+            </div>
+            <button class="btn bg" onclick="go('D-dropoff')">🚐 Start trip</button>
+          </div>
+        </div>
+
+        <!-- D-dropoff -->
+        <div class="screen" id="D-dropoff">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div class="hdr"><h2>En route</h2><p>Heading to school</p></div>
+          <div class="content">
+            <div class="card">
+              <div style="font-weight:500;font-size:14px;margin-bottom:4px" id="d-route-name">—</div>
+              <div class="mut" style="font-size:12px;margin-bottom:12px" id="d-route-school">—</div>
+              <div style="height:4px;background:var(--border);border-radius:4px;overflow:hidden">
+                <div style="height:100%;background:var(--green);width:72%;border-radius:4px"></div>
+              </div>
+              <div class="mut" style="font-size:12px;margin-top:6px">~4 min remaining</div>
+            </div>
+            <div class="err" id="drop-err"></div>
+            <button class="btn ba" id="drop-btn" onclick="confirmDropoff()">📍 Confirm drop-off — release payment</button>
+            <div class="mut" style="font-size:12px;text-align:center">Only press after the scholar exits the vehicle safely</div>
+          </div>
+        </div>
+
+        <!-- D-success -->
+        <div class="screen" id="D-success">
+          <div class="sbar"><span>9:41</span><span>●●●</span></div>
+          <div style="padding:28px 20px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;flex:1">
+            <div class="si">💰</div>
+            <div>
+              <div style="font-size:20px;font-weight:500">Payment released!</div>
+              <div style="font-size:30px;font-weight:600;color:var(--green);margin-top:4px" id="d-suc-amount">—</div>
+              <div class="mut" style="font-size:12px;margin-top:4px">Released from Open Payments escrow</div>
+            </div>
+            <div class="card" style="width:100%;text-align:left">
+              <div class="row" style="margin-bottom:8px"><span class="mut" style="font-size:13px">Scholar</span><span style="font-size:13px;font-weight:500" id="d-suc-scholar">—</span></div>
+              <div class="row"><span class="mut" style="font-size:13px">Status</span><span class="pill pg">Completed ✓</span></div>
+            </div>
+            <button class="btn bg" onclick="go('D-home');refreshDriverHome()">← Back to dashboard</button>
+          </div>
+        </div>
+
+      </div><!-- /screen-root -->
+    </div><!-- /phone -->
+  </div><!-- /phone-col -->
+
+</div><!-- /demo -->
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────
+//  CONFIG
+//  Tokens are obtained from POST /api/auth/login on your backend.
+//  Wallet addresses must match the wallet_address field in the
+//  users table (set via PATCH /api/auth/me or at signup).
+//  The backend uses these to call the real Interledger network.
+// ─────────────────────────────────────────────────────────────
+let API_BASE   = 'http://localhost:3001';
+
+// These are seeded demo credentials. Replace with tokens from
+// POST /api/auth/login once you have the backend running.
+let PARENT_JWT = '';   // e.g. eyJhbGciOiJIUzI1NiIs...
+let DRIVER_JWT = '';
+
+// Wallet addresses registered at https://wallet.interledger-test.dev
+// Must match OP_WALLET_ADDRESS in backend/.env and user.wallet_address in DB
+const PARENT_WALLET = 'https://ilp.interledger-test.dev/thembeka';
+const DRIVER_WALLET = 'https://ilp.interledger-test.dev/sipho';
+
+// ─────────────────────────────────────────────────────────────
+//  STATE
+// ─────────────────────────────────────────────────────────────
+let scholars = [];
+let currentRole = 'parent';
+let currentScreen = 'P-home';
+let navHistory = ['P-home'];
+let selectedFare = 34;
+let selectedScholarId = null;
+let activeTxId = null;
+let activePIN  = null;
+let pinStore   = {};       // { txId: { pin, scholar, fare } }
+let boardedEntry = null;
+let driverPin  = '';
+let pollTimer  = null;
+let driverEarned = 0;
+let completedTrips = [];
+
+// ─────────────────────────────────────────────────────────────
+//  BACKEND CONNECT
+// ─────────────────────────────────────────────────────────────
+async function checkBackend() {
+  const url = document.getElementById('be-url').value.trim().replace(/\/$/,'');
+  API_BASE = url;
+  const dot = document.getElementById('be-dot');
+  const status = document.getElementById('be-status');
+  dot.className = 'dot dot-grey'; status.textContent = 'Checking…';
+  try {
+    const r = await fetch(`${API_BASE}/api/health`);
+    const d = await r.json();
+    if (d.ok) {
+      dot.className = 'dot dot-green';
+      status.textContent = `Connected — ${d.service}`;
+      // Auto-login demo users if no tokens set
+      if (!PARENT_JWT) await autoLogin();
+    } else throw new Error('not ok');
+  } catch {
+    dot.className = 'dot dot-red';
+    status.textContent = 'Could not reach backend — running in demo mode';
+  }
+}
+
+async function autoLogin() {
+  // Try logging in the seeded demo accounts. Your backend seed should
+  // create these or you can pre-set PARENT_JWT / DRIVER_JWT above.
+  try {
+    const pr = await fetch(`${API_BASE}/api/auth/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:'thembeka@openremit.dev', password:'demo1234' })
+    });
+    if (pr.ok) { const d = await pr.json(); PARENT_JWT = d.token; }
+  } catch {}
+  try {
+    const dr = await fetch(`${API_BASE}/api/auth/login`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ email:'sipho@openremit.dev', password:'demo1234' })
+    });
+    if (dr.ok) { const d = await dr.json(); DRIVER_JWT = d.token; }
+  } catch {}
+}
+
+// ─────────────────────────────────────────────────────────────
+//  API
+// ─────────────────────────────────────────────────────────────
+async function api(method, path, body) {
+  const token = currentRole === 'driver' ? DRIVER_JWT : PARENT_JWT;
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    ...(body ? { body: JSON.stringify(body) } : {})
+  };
+  const res = await fetch(`${API_BASE}${path}`, opts);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  NAVIGATION
+// ─────────────────────────────────────────────────────────────
+function go(id) {
+  document.getElementById(currentScreen)?.classList.remove('active');
+  document.getElementById(id)?.classList.add('active');
+  navHistory.push(id); currentScreen = id;
+  renderGuide();
+}
+function back() {
+  if (navHistory.length > 1) {
+    navHistory.pop();
+    document.getElementById(currentScreen)?.classList.remove('active');
+    currentScreen = navHistory[navHistory.length - 1];
+    document.getElementById(currentScreen)?.classList.add('active');
+  }
+  renderGuide();
+}
+function switchRole(role) {
+  currentRole = role;
+  document.getElementById('tab-parent').className = 'rtab' + (role==='parent' ? ' active' : '');
+  document.getElementById('tab-driver').className  = 'rtab' + (role==='driver'  ? ' active' : '');
+  const t = role === 'parent' ? 'P-home' : 'D-home';
+  document.getElementById(currentScreen)?.classList.remove('active');
+  navHistory = [t]; currentScreen = t;
+  document.getElementById(t)?.classList.add('active');
+  if (role === 'parent') loadScholars();
+  if (role === 'driver') refreshDriverHome();
+  renderGuide();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  FLOW GUIDE
+// ─────────────────────────────────────────────────────────────
+const FLOWS = {
+  parent: [
+    { id:'P-home',    label:'Parent dashboard' },
+    { id:'P-add',     label:'Add a scholar' },
+    { id:'P-auth',    label:'Authorise trip (Open Payments)' },
+    { id:'P-consent', label:'Approve in Interledger wallet' },
+    { id:'P-pin',     label:'PIN generated — give to scholar' },
+  ],
+  driver: [
+    { id:'D-home',    label:'Driver dashboard' },
+    { id:'D-pin',     label:'Enter scholar PIN' },
+    { id:'D-board',   label:'Scholar verified — start trip' },
+    { id:'D-dropoff', label:'Confirm drop-off' },
+    { id:'D-success', label:'Payment released' },
+  ],
+};
+function renderGuide() {
+  const flow = FLOWS[currentRole];
+  const idx = flow.findIndex(f => f.id === currentScreen);
+  document.getElementById('guide-steps').innerHTML = flow.map((s, i) => `
+    <div class="gs ${i===idx?'cur':i<idx?'done':''}" onclick="go('${s.id}')">
+      <div class="gn">${i < idx ? '✓' : i+1}</div>
+      <span class="gl">${s.label}</span>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  SCHOLARS  (localStorage, seeded with 2 demo scholars)
+// ─────────────────────────────────────────────────────────────
+function loadScholars() {
+  try { scholars = JSON.parse(localStorage.getItem('or_scholars') || '[]'); } catch { scholars = []; }
+  if (!scholars.length) {
+    scholars = [
+      { id:'s1', name:'Amara Mokoena',  age:9,  grade:'Grade 4', school:'Prestige Primary', status:'pending' },
+      { id:'s2', name:'Kwame Mokoena',  age:11, grade:'Grade 6', school:'Prestige Primary', status:'arrived' },
+    ];
+    saveScholars();
+  }
+  renderScholarList();
+}
+function saveScholars() { localStorage.setItem('or_scholars', JSON.stringify(scholars)); }
+
+function renderScholarList() {
+  const el = document.getElementById('p-scholar-list');
+  if (!scholars.length) {
+    el.innerHTML = `<div class="mut" style="font-size:13px;text-align:center;padding:8px">No scholars yet</div>`;
+    return;
+  }
+  el.innerHTML = scholars.map(s => `
+    <div class="sr">
+      <div class="av">${s.name[0]}</div>
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:14px">${s.name}</div>
+        <div class="mut" style="font-size:12px">${s.school}</div>
+      </div>
+      <div class="pill ${s.status==='arrived'?'pg':s.status==='en-route'?'pa':'pr'}">
+        ${s.status==='arrived'?'Arrived ✓':s.status==='en-route'?'En route':'Pending'}
+      </div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  ADD SCHOLAR
+// ─────────────────────────────────────────────────────────────
+function addScholar() {
+  const name   = document.getElementById('add-name').value.trim();
+  const age    = document.getElementById('add-age').value.trim();
+  const grade  = document.getElementById('add-grade').value.trim();
+  const school = document.getElementById('add-school').value.trim();
+  const err = document.getElementById('add-err');
+  if (!name || !age || !grade || !school) { err.textContent = 'Please fill in all fields'; return; }
+  err.textContent = '';
+  scholars.push({ id: 's' + Date.now(), name, age: +age, grade, school, status: 'pending' });
+  saveScholars();
+  ['add-name','add-age','add-grade','add-school'].forEach(id => document.getElementById(id).value = '');
+  go('P-auth'); renderPicker();
+}
+
+// ─────────────────────────────────────────────────────────────
+//  AUTH PICKER
+// ─────────────────────────────────────────────────────────────
+function renderPicker() {
+  const el = document.getElementById('auth-picker');
+  if (!scholars.length) {
+    el.innerHTML = `<div class="mut" style="font-size:13px">No scholars. <span style="color:var(--green);cursor:pointer" onclick="go('P-add')">Add one →</span></div>`;
+    return;
+  }
+  el.innerHTML = scholars.map((s, i) => `
+    <label style="display:flex;align-items:center;gap:10px;padding:8px 0;cursor:pointer;border-bottom:${i<scholars.length-1?'.5px solid var(--border)':'none'}">
+      <input type="radio" name="sp" value="${s.id}" ${i===0?'checked':''} style="accent-color:var(--green)" onchange="selectedScholarId='${s.id}'">
+      <div class="av">${s.name[0]}</div>
+      <div><div style="font-weight:500;font-size:14px">${s.name}</div><div class="mut" style="font-size:12px">${s.school}</div></div>
+    </label>`).join('');
+  selectedScholarId = scholars[0]?.id || null;
+}
+function selFare(el, v) {
+  document.querySelectorAll('#fare-chips .chip').forEach(c => c.classList.remove('sel'));
+  el.classList.add('sel'); selectedFare = v;
+}
+
+// ─────────────────────────────────────────────────────────────
+//  OPEN PAYMENTS STEP TRACKER
+// ─────────────────────────────────────────────────────────────
+function setOPStep(n, state) {
+  const sn = document.getElementById(`op${n}`);
+  const sl = document.getElementById(`opl${n}`);
+  if (!sn) return;
+  sn.className = 'sn ' + (state==='done'?'done':state==='active'?'active':'');
+  sl.className = 'sl ' + (state==='done'?'done':state==='active'?'active':'');
+  if (state === 'done') sn.textContent = '✓';
+  else sn.textContent = n;
+}
+function resetOPSteps() { for(let i=1;i<=6;i++) setOPStep(i,''); }
+
+// ─────────────────────────────────────────────────────────────
+//  ★  OPEN PAYMENTS FLOW  ★
+//
+//  This calls your Express backend which uses the
+//  @interledger/open-payments SDK to talk to the real
+//  Interledger network (ilp.interledger-test.dev).
+//
+//  Flow:
+//    POST /api/remit/quote  — resolves wallets, creates
+//      incoming payment on driver's wallet, gets quote on
+//      parent's wallet, persists PENDING transaction in DB
+//
+//    POST /api/remit/consent — requests interactive outgoing-
+//      payment GNAP grant from parent's auth server, returns
+//      the wallet's consent URL (interact.redirect)
+//
+//    Parent opens that URL in their browser and approves
+//
+//    GET /api/remit/status/:id — polled until COMPLETED
+//      (backend /api/callback fires after wallet redirects back,
+//      continues the grant, creates the outgoing payment)
+// ─────────────────────────────────────────────────────────────
+async function startFlow() {
+  const sel = document.querySelector('input[name="sp"]:checked');
+  const errEl = document.getElementById('auth-err');
+  errEl.textContent = '';
+
+  if (!sel) { errEl.textContent = 'Select a scholar first'; return; }
+
+  const scholar = scholars.find(s => s.id === sel.value);
+  if (!scholar) { errEl.textContent = 'Scholar not found'; return; }
+
+  const btn = document.getElementById('auth-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Connecting to Interledger…';
+  resetOPSteps();
+
+  // In demo mode (no backend), simulate the flow
+  if (!PARENT_JWT) {
+    await simulateFlow(scholar);
+    btn.disabled = false; btn.textContent = '🔐 Start Open Payments flow';
+    return;
+  }
+
+  try {
+    // ── Step 1–3: POST /api/remit/quote ──────────────────
+    // Backend: resolves wallets, creates incoming payment,
+    // creates quote (all via @interledger/open-payments SDK)
+    setOPStep(1, 'active');
+    await delay(300);
+    setOPStep(1, 'done'); setOPStep(2, 'active');
+    await delay(400);
+
+    const quoteRes = await api('POST', '/api/remit/quote', {
+      senderWalletAddress:   PARENT_WALLET,
+      receiverWalletAddress: DRIVER_WALLET,
+      amount:      String(selectedFare * 100),   // ZAR, scale 2 → cents
+      paymentType: 'FIXED_SEND',
+    });
+
+    setOPStep(2, 'done'); setOPStep(3, 'active');
+    await delay(300);
+    setOPStep(3, 'done'); setOPStep(4, 'active');
+
+    activeTxId = quoteRes.transactionId;
+
+    // ── Step 4: POST /api/remit/consent ──────────────────
+    // Backend: requests interactive outgoing-payment GNAP grant
+    // Returns interactUrl — the parent's wallet consent page
+    const consentRes = await api('POST', '/api/remit/consent', { transactionId: activeTxId });
+
+    setOPStep(4, 'done'); setOPStep(5, 'active');
+
+    // Populate consent screen
+    document.getElementById('con-scholar').textContent = scholar.name;
+    document.getElementById('con-fare').textContent    = `R${selectedFare}`;
+    document.getElementById('con-txid').textContent    = activeTxId.slice(0, 18) + '…';
+    const link = document.getElementById('consent-link');
+    link.href        = consentRes.interactUrl;
+    link.textContent = 'Open Interledger wallet to approve →';
+
+    // Mark scholar en route
+    const si = scholars.findIndex(s => s.id === scholar.id);
+    scholars[si].status = 'en-route'; saveScholars();
+
+    btn.disabled = false; btn.textContent = '🔐 Start Open Payments flow';
+    go('P-consent');
+
+  } catch (e) {
+    errEl.textContent = e.message;
+    btn.disabled = false; btn.textContent = '🔐 Start Open Payments flow';
+    resetOPSteps();
+  }
+}
+
+// ── Step 5→6: Poll until backend callback fires ──────────
+function startPolling() {
+  if (!activeTxId) return;
+  const msg = document.getElementById('poll-msg');
+  msg.textContent = 'Checking…';
+  if (pollTimer) clearInterval(pollTimer);
+  const check = async () => {
+    try {
+      const tx = await api('GET', `/api/remit/status/${activeTxId}`);
+      if (tx.status === 'COMPLETED') {
+        clearInterval(pollTimer);
+        setOPStep(5, 'done'); setOPStep(6, 'done');
+        issuePIN(scholars.find(s=>s.id===selectedScholarId), activeTxId);
+      } else if (tx.status === 'FAILED') {
+        clearInterval(pollTimer);
+        msg.textContent = `Failed: ${tx.errorMessage || 'unknown error'}`;
+      } else {
+        msg.textContent = `Status: ${tx.status}…`;
+      }
+    } catch (e) { msg.textContent = e.message; }
+  };
+  check();
+  pollTimer = setInterval(check, 3000);
+}
+
+// Issue PIN after grant completes
+function issuePIN(scholar, txId) {
+  activePIN = String(Math.floor(10000 + Math.random() * 90000));
+  pinStore[txId] = { pin: activePIN, scholar, fare: selectedFare, txId };
+  savePinStore();
+  document.getElementById('pin-summary').textContent  = `R${selectedFare} authorised for ${scholar.name}`;
+  document.getElementById('pin-fare-note').textContent = selectedFare;
+  document.getElementById('p-pin-dots').innerHTML =
+    activePIN.split('').map(d => `<div class="pd f">${d}</div>`).join('');
+  go('P-pin');
+}
+
+// ── Demo mode: simulate flow without real backend ─────────
+async function simulateFlow(scholar) {
+  for (let i = 1; i <= 6; i++) {
+    setOPStep(i, 'active');
+    await delay(i === 5 ? 1200 : 500);
+    setOPStep(i, 'done');
+  }
+  const fakeTxId = 'demo-' + Date.now();
+  activeTxId = fakeTxId;
+
+  // In demo mode we don't redirect — simulate immediate approval
+  document.getElementById('con-scholar').textContent = scholar.name;
+  document.getElementById('con-fare').textContent    = `R${selectedFare}`;
+  document.getElementById('con-txid').textContent    = fakeTxId;
+  document.getElementById('consent-link').href       = '#';
+  document.getElementById('consent-link').textContent = '(Demo mode — no real wallet)';
+  document.getElementById('poll-msg').textContent    = 'Demo mode: grant auto-approved';
+
+  const si = scholars.findIndex(s => s.id === scholar.id);
+  scholars[si].status = 'en-route'; saveScholars();
+
+  go('P-consent');
+  // Auto-resolve for demo
+  await delay(600);
+  setOPStep(5,'done'); setOPStep(6,'done');
+  issuePIN(scholar, fakeTxId);
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DRIVER: PIN
+// ─────────────────────────────────────────────────────────────
+function resetPin() { driverPin = ''; renderDriverPin(); document.getElementById('d-pin-err').textContent = ''; }
+function renderDriverPin() {
+  document.getElementById('d-pin-dots').innerHTML =
+    Array.from({length:5}, (_, i) => `<div class="pd ${i<driverPin.length?'f':''}">${i<driverPin.length?driverPin[i]:'_'}</div>`).join('');
+  document.getElementById('d-pin-status').textContent =
+    driverPin.length === 5 ? 'Tap OK to validate' : `Enter the 5-digit PIN (${driverPin.length}/5)`;
+}
+function pk(k) {
+  if (k === 'back') driverPin = driverPin.slice(0, -1);
+  else if (driverPin.length < 5) driverPin += k;
+  renderDriverPin();
+  document.getElementById('d-pin-err').textContent = '';
+}
+
+function validatePin() {
+  const err = document.getElementById('d-pin-err');
+  if (driverPin.length < 5) { err.textContent = 'Enter all 5 digits'; return; }
+  loadPinStore();
+  const entry = Object.values(pinStore).find(e => e.pin === driverPin);
+  if (!entry) {
+    err.textContent = 'Invalid PIN — check with the parent';
+    driverPin = ''; renderDriverPin(); return;
+  }
+  boardedEntry = entry;
+  document.getElementById('d-av').textContent          = entry.scholar.name[0];
+  document.getElementById('d-board-name').textContent  = entry.scholar.name;
+  document.getElementById('d-board-school').textContent = entry.scholar.school;
+  document.getElementById('d-board-fare').textContent  = `R${entry.fare}`;
+  document.getElementById('d-route-name').textContent  = entry.scholar.name;
+  document.getElementById('d-route-school').textContent = entry.scholar.school;
+  driverPin = ''; renderDriverPin();
+  go('D-board');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DRIVER: DROP-OFF → payment release
+//  In production: POST /api/remit/dropoff  (custom route to add
+//  to your backend) which verifies driver JWT and creates the
+//  outgoing payment if the grant was AWAITING_GRANT, or confirms
+//  it completed if already COMPLETED after wallet callback.
+//  Here we verify against GET /api/remit/status/:id.
+// ─────────────────────────────────────────────────────────────
+async function confirmDropoff() {
+  if (!boardedEntry) return;
+  const btn = document.getElementById('drop-btn');
+  const err = document.getElementById('drop-err');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Releasing payment…';
+
+  try {
+    // Verify transaction status from backend
+    if (DRIVER_JWT && boardedEntry.txId && !boardedEntry.txId.startsWith('demo-')) {
+      const tx = await api('GET', `/api/remit/status/${boardedEntry.txId}`);
+      if (tx.status !== 'COMPLETED') {
+        throw new Error(`Payment not yet confirmed by backend (status: ${tx.status})`);
+      }
+    }
+
+    // Update local state
+    const si = scholars.findIndex(s => s.id === boardedEntry.scholar.id);
+    if (si >= 0) { scholars[si].status = 'arrived'; saveScholars(); }
+    delete pinStore[boardedEntry.txId]; savePinStore();
+
+    driverEarned += boardedEntry.fare;
+    completedTrips.push({ ...boardedEntry, completedAt: new Date().toISOString() });
+
+    document.getElementById('d-earned').textContent      = `R${driverEarned} today`;
+    document.getElementById('d-suc-amount').textContent  = `R${boardedEntry.fare}`;
+    document.getElementById('d-suc-scholar').textContent = boardedEntry.scholar.name;
+
+    btn.disabled = false; btn.innerHTML = '📍 Confirm drop-off — release payment';
+    go('D-success');
+
+  } catch (e) {
+    err.textContent = e.message;
+    btn.disabled = false; btn.innerHTML = '📍 Confirm drop-off — release payment';
+  }
+}
+
+function refreshDriverHome() {
+  document.getElementById('d-earned').textContent = `R${driverEarned} today`;
+  const el = document.getElementById('d-trip-list');
+  if (!completedTrips.length) {
+    el.innerHTML = `<div class="mut" style="font-size:13px;text-align:center;padding:8px">No trips yet</div>`;
+    return;
+  }
+  el.innerHTML = completedTrips.map(t => `
+    <div class="sr">
+      <div class="av">${t.scholar.name[0]}</div>
+      <div style="flex:1">
+        <div style="font-weight:500;font-size:14px">${t.scholar.name}</div>
+        <div class="mut" style="font-size:12px">${t.scholar.school}</div>
+      </div>
+      <div style="font-weight:600;color:var(--green)">R${t.fare}</div>
+    </div>`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+//  PIN STORE (persisted across parent→driver role switch)
+// ─────────────────────────────────────────────────────────────
+function savePinStore() { localStorage.setItem('or_pins', JSON.stringify(pinStore)); }
+function loadPinStore() {
+  try { pinStore = JSON.parse(localStorage.getItem('or_pins') || '{}'); } catch { pinStore = {}; }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  UTILS
+// ─────────────────────────────────────────────────────────────
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─────────────────────────────────────────────────────────────
+//  INIT
+// ─────────────────────────────────────────────────────────────
+renderGuide();
+renderDriverPin();
+loadScholars();
+loadPinStore();
+</script>
+</body>
+</html>
